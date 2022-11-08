@@ -46,6 +46,43 @@ def dice_loss(inputs, targets):
     return (1 - dice).mean()
 
 
+def evaluate(model, test_loader, device, logger):
+    model.eval()
+    dices, ious = [], []
+    for sample in test_loader:
+        image, target = sample["image"], sample["mask"]
+        with torch.inference_mode():
+            image, target = image.to(device), target.to(device)
+            pred = model(image)
+            pred = pred.sigmoid()
+            target = torch.where(target > 0.5, 1., 0.)
+            pred = torch.where(pred > 0.5, 1., 0.)
+
+            tp = torch.logical_and(target, pred).sum(dim=(1, 2, 3))
+            fp = torch.logical_and(torch.logical_not(target),
+                                   pred).sum(dim=(1, 2, 3))
+            fn = torch.logical_and(target,
+                                   torch.logical_not(pred)).sum(dim=(1, 2, 3))
+            smooth = 1e-6
+            sensitivity = tp / (tp + fn + smooth)
+            precision = tp / (tp + fp + smooth)
+
+            dice = (2 * precision * sensitivity /
+                    (precision + sensitivity + smooth))
+            iou = tp / (tp + fp + fn + smooth)
+
+            dices.extend(dice.tolist())
+            ious.extend(iou.tolist())
+    mdice = np.asarray(dices).mean()
+    miou = np.asarray(ious).mean()
+
+    message = "mDic {:.4f}, mIoU {:.4f}".format(mdice, miou)
+    print(message)
+    logger.info(message)
+
+    return mdice, miou
+
+
 def train_one_epoch(model: nn.Module,
                     train_loader: DataLoader,
                     criterion,
@@ -82,12 +119,17 @@ def train_one_epoch(model: nn.Module,
                                      mode="bilinear",
                                      align_corners=False)
 
-            fg, bg, edge = model(image)
-            loss_fg = criterion(fg, mask)
-            loss_bg = criterion(bg, imask)
+            fg2, fg3, fg4, bg2, bg3, bg4, edge = model(image)
+            loss_fg2 = criterion(fg2, mask)
+            loss_fg3 = criterion(fg3, mask)
+            loss_fg4 = criterion(fg4, mask)
+            loss_bg2 = criterion(bg2, imask)
+            loss_bg3 = criterion(bg3, imask)
+            loss_bg4 = criterion(bg4, imask)
             loss_edge = dice_loss(edge, boundary)
 
-            loss = loss_fg + loss_bg + loss_edge
+            loss = (loss_fg2 + loss_fg3 + loss_fg4 +
+                    loss_bg2 + loss_bg3 + loss_bg4 + loss_edge)
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
@@ -176,43 +218,9 @@ def train(args, logger):
                 model.state_dict(),
                 os.path.join(args.save_path, "epoch_%03d_best.pth" % epoch),
             )
-
-
-def evaluate(model, test_loader, device, logger):
-    model.eval()
-    dices, ious = [], []
-    for sample in test_loader:
-        image, target = sample["image"], sample["mask"]
-        with torch.inference_mode():
-            image, target = image.to(device), target.to(device)
-            pred = model(image)
-            pred = pred.sigmoid()
-            target = torch.where(target > 0.5, 1., 0.)
-            pred = torch.where(pred > 0.5, 1., 0.)
-
-            tp = torch.logical_and(target, pred).sum(dim=(1, 2, 3))
-            fp = torch.logical_and(
-                torch.logical_not(target), pred).sum(dim=(1, 2, 3))
-            fn = torch.logical_and(
-                target, torch.logical_not(pred)).sum(dim=(1, 2, 3))
-            smooth = 1e-6
-            sensitivity = tp / (tp + fn + smooth)
-            precision = tp / (tp + fp + smooth)
-
-            dice = (2 * precision * sensitivity
-                    / (precision + sensitivity + smooth))
-            iou = tp / (tp + fp + fn + smooth)
-
-            dices.extend(dice.tolist())
-            ious.extend(iou.tolist())
-    mdice = np.asarray(dices).mean()
-    miou = np.asarray(ious).mean()
-
-    message = "mDic {:.4f}, mIoU {:.4f}".format(mdice, miou)
-    print(message)
-    logger.info(message)
-
-    return mdice, miou
+            message = "{} New high score! {}".format("#" * 40, "#" * 40)
+            print(message)
+            logger.info(message)
 
 
 def main():

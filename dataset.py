@@ -30,7 +30,7 @@ class PolypDataset(Dataset):
         mask = Image.open(mask_path).convert("L")
         imask = Image.open(imask_path).convert("L")
         boundary = Image.open(boundary_path).convert("L")
-        image_size = image.size
+        image_size = str(image.size)
         sample = {"image": image,
                   "mask": mask,
                   "imask": imask,
