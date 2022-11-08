@@ -115,6 +115,7 @@ class BUNet(nn.Module):
         self.conv_edge_1x1 = nn.Conv2d(channel, 1, 1)
 
         self.conv_concat_fg = nn.Conv2d(3, 1, 1)
+        self.conv_concat_bg = nn.Conv2d(3, 1, 1)
 
     def load_backbone_weights(self, path):
         save_model = torch.load(path)
@@ -156,12 +157,13 @@ class BUNet(nn.Module):
         bg4 = F.interpolate(bg4, size=HW, mode='bilinear', align_corners=False)
 
         fg = self.conv_concat_fg(torch.cat([fg2, fg3, fg4], dim=1))
-
+        bg = self.conv_concat_bg(torch.cat([bg2, bg3, bg4], dim=1))
         edge = F.interpolate(
             edge, size=HW, mode='bilinear', align_corners=False
         )
+
         if self.training:
-            return fg2, fg3, fg4, bg2, bg3, bg4, fg, edge
+            return fg, bg, edge
         else:
             return fg
 
