@@ -1,0 +1,7 @@
+data
+weights
+results
+log
+*.ipynb
+.vscode
+__pycache__
