@@ -116,9 +116,10 @@ def train_one_epoch(model: nn.Module,
             dist.barrier()
             dist.all_reduce(local_loss)
             if dist.get_rank() == 0:
+                lr = lr_scheduler.get_last_lr()[0]
                 message = (
-                    "Epoch: {:<5d} Step: {:<5d} Loss: {:.4f}"
-                    .format(epoch, i, local_loss.item())
+                    "Epoch: {:<5d} Step: {:<5d} Lr: {:<10.6f} Loss: {:.4f}"
+                    .format(epoch, i, lr, local_loss.item())
                 )
                 logger.info(message)
 
@@ -163,7 +164,7 @@ def train(args):
     scaler = torch.cuda.amp.grad_scaler.GradScaler()
     lr_scheduler = optim.lr_scheduler.LambdaLR(
         optimizer,
-        lambda t: get_lr_decay(t, args.epochs)
+        lambda t: get_lr_decay(t, args.lr_decay_epochs, args.lr_decay_rate)
     )
 
     best_test_avg_mdice = 0.
@@ -222,11 +223,19 @@ def train(args):
 
 def main():
     args = get_args()
-    if not os.path.exists(args.save_path):
-        os.makedirs(args.save_path)
-    if not os.path.exists(args.log_path):
-        os.makedirs(args.log_path)
     setup_ddp(args)
+
+    args.train_description = (f"batch_{args.batch_size * args.world_size}"
+                              f"_epochs_{args.epochs}"
+                              f"_lr_{args.lr}".replace(".", "_"))
+    args.save_path = os.path.join(args.save_path,
+                                  args.train_description,
+                                  datetime.now().strftime("%Y%m%d%H%M%S"))
+    args.log_path = os.path.join(args.log_path, args.train_description)
+    if dist.get_rank() == 0:
+        os.makedirs(args.save_path, exist_ok=True)
+        os.makedirs(args.log_path, exist_ok=True)
+
     train(args)
 
 
@@ -237,6 +246,8 @@ def get_args():
     parser.add_argument("--workers", type=int, default=16)
     parser.add_argument("--epochs", type=int, default=100)
     parser.add_argument("--lr", type=float, default=1e-4)
+    parser.add_argument("--lr-decay-epochs", type=int, default=50)
+    parser.add_argument("--lr-decay-rate", type=float, default=0.5)
     parser.add_argument("--weight-decay", type=float, default=1e-4)
     parser.add_argument("--log-path", type=str, default="./log")
     parser.add_argument("--pretrained-path", type=str,
@@ -244,16 +255,8 @@ def get_args():
     parser.add_argument("--save-path", type=str, default="./weights/training")
     parser.add_argument("--print-freq", type=int, default=10)
     parser.add_argument("--save-freq", type=int, default=10)
-    parser.add_argument("--world-size", type=int, default=2)
 
     args = parser.parse_args()
-    args.train_description = (f"batch_{args.batch_size * args.world_size}"
-                              f"_epochs_{args.epochs}"
-                              f"_lr_{args.lr}".replace(".", "_"))
-    args.save_path = os.path.join(args.save_path,
-                                  args.train_description,
-                                  datetime.now().strftime("%Y%m%d%H%M%S"))
-    args.log_path = os.path.join(args.log_path, args.train_description)
 
     return args
 

@@ -7,8 +7,8 @@ from torch import distributed as dist
 from torch.nn import functional as F
 
 
-def get_lr_decay(epoch, decay_epoch):
-    return 0.1 ** (epoch // decay_epoch)
+def get_lr_decay(epoch, decay_epochs, decay_rate):
+    return decay_rate ** (epoch // decay_epochs)
 
 
 def dice_bce_loss(inputs, targets):
