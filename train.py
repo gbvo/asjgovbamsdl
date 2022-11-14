@@ -1,4 +1,5 @@
 import argparse
+import json
 import logging
 import os
 from datetime import datetime
@@ -134,6 +135,9 @@ def train(args):
         logger = setup_logger(args)
     else:
         logger = None
+    if dist.get_rank() == 0:
+        message = json.dumps(vars(args), indent=4)
+        logger.info(message)
     transforms = Compose([Resize(size=(352, 352)),
                           ToTensor(),
                           Normalize(mean=[0.485, 0.456, 0.406],
@@ -150,7 +154,9 @@ def train(args):
                               drop_last=True,
                               pin_memory=True)
     model = BUNet()
-    model.load_backbone_weights(os.path.join(args.pretrained_path))
+    model.load_backbone_weights(
+        "./weights/pretrained/pvt_v2_b2.pth"
+    )
 
     model.to(device)
     model = SyncBatchNorm.convert_sync_batchnorm(model)
@@ -225,9 +231,12 @@ def main():
     args = get_args()
     setup_ddp(args)
 
-    args.train_description = (f"batch_{args.batch_size * args.world_size}"
-                              f"_epochs_{args.epochs}"
-                              f"_lr_{args.lr}".replace(".", "_"))
+    args.train_description = (
+        f"backbone_{args.backbone}"
+        f"_batch_{args.batch_size * args.world_size}"
+        f"_epochs_{args.epochs}"
+        f"_lr_{args.lr}".replace(".", "_")
+    )
     args.save_path = os.path.join(args.save_path,
                                   args.train_description,
                                   datetime.now().strftime("%Y%m%d%H%M%S"))
@@ -244,14 +253,13 @@ def get_args():
     parser.add_argument("--data-root", type=str, default="./data/TrainDataset")
     parser.add_argument("--batch-size", type=int, default=16)
     parser.add_argument("--workers", type=int, default=16)
+    parser.add_argument("--backbone", type=str, default="pvt")
     parser.add_argument("--epochs", type=int, default=100)
     parser.add_argument("--lr", type=float, default=1e-4)
     parser.add_argument("--lr-decay-epochs", type=int, default=50)
     parser.add_argument("--lr-decay-rate", type=float, default=0.5)
     parser.add_argument("--weight-decay", type=float, default=1e-4)
     parser.add_argument("--log-path", type=str, default="./log")
-    parser.add_argument("--pretrained-path", type=str,
-                        default="./weights/pretrained/pvt_v2_b2.pth")
     parser.add_argument("--save-path", type=str, default="./weights/training")
     parser.add_argument("--print-freq", type=int, default=10)
     parser.add_argument("--save-freq", type=int, default=10)
