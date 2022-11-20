@@ -34,6 +34,40 @@ class BasicConv2d(nn.Module):
         return x
 
 
+class TransLayer(nn.Module):
+    def __init__(self, in_channel, out_channel):
+        super(TransLayer, self).__init__()
+        self.relu = nn.ReLU(True)
+        self.branch0 = nn.Sequential(
+            BasicConv2d(in_channel, out_channel, 1),
+        )
+        self.branch1 = nn.Sequential(
+            BasicConv2d(in_channel, out_channel, 1),
+            BasicConv2d(out_channel, out_channel, 3, 1, 1),
+            BasicConv2d(
+                out_channel, out_channel, 3, padding=3, dilation=3
+            )
+        )
+        self.branch2 = nn.Sequential(
+            BasicConv2d(in_channel, out_channel, 1),
+            BasicConv2d(out_channel, out_channel, 3, 1, 1),
+            BasicConv2d(
+                out_channel, out_channel, 3, padding=5, dilation=5
+            )
+        )
+        self.conv_cat = BasicConv2d(3 * out_channel, out_channel, 3, padding=1)
+        self.conv_res = BasicConv2d(in_channel, out_channel, 1)
+
+    def forward(self, x):
+        x0 = self.branch0(x)
+        x1 = self.branch1(x)
+        x2 = self.branch2(x)
+        x_cat = self.conv_cat(torch.cat((x0, x1, x2), 1))
+
+        x = self.relu(x_cat + self.conv_res(x))
+        return x
+
+
 class FPN(nn.Module):
     def __init__(self, channel):
         super(FPN, self).__init__()
@@ -96,10 +130,10 @@ class BUNet(nn.Module):
         super(BUNet, self).__init__()
 
         self.backbone = pvt_v2_b2()  # [64, 128, 320, 512]
-        self.Translayer1 = BasicConv2d(64, channel, 1)
-        self.Translayer2 = BasicConv2d(128, channel, 1)
-        self.Translayer3 = BasicConv2d(320, channel, 1)
-        self.Translayer4 = BasicConv2d(512, channel, 1)
+        self.Translayer1 = TransLayer(64, channel)
+        self.Translayer2 = TransLayer(128, channel)
+        self.Translayer3 = TransLayer(320, channel)
+        self.Translayer4 = TransLayer(512, channel)
 
         self.fpn = FPN(channel)
 
