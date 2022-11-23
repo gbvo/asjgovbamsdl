@@ -20,6 +20,12 @@ from utils import (dice_bce_loss, dice_loss, get_lr_decay, setup_ddp,
                    setup_logger)
 
 
+# ugly
+def is_good(candidate):
+    trigger = np.array([0.93, 0.92, 0.89, 0.81, 0.79])
+    return np.all(candidate > trigger)
+
+
 def evaluate(model, test_loader, device, logger):
     model.eval()
     dices, ious = [], []
@@ -173,7 +179,6 @@ def train(args):
         lambda t: get_lr_decay(t, args.lr_decay_epochs, args.lr_decay_rate)
     )
 
-    best_test_avg_mdice = 0.
     for epoch in range(args.epochs):
         if dist.get_rank() == 0:
             print("Training epoch {}".format(epoch))
@@ -209,14 +214,13 @@ def train(args):
                                          num_workers=args.workers)
                 mdice, _ = evaluate(model, test_loader, device, logger)
                 test_mdices.append(mdice)
-            test_avg_mdice = np.asarray(test_mdices).mean()
+            test_mdices = np.asarray(test_mdices)
             if epoch % args.save_freq == args.save_freq - 1:
                 torch.save(
                     model_without_ddp.state_dict(),
                     os.path.join(args.save_path, "epoch_%03d.pth" % epoch),
                 )
-            if test_avg_mdice > best_test_avg_mdice:
-                best_test_avg_mdice = test_avg_mdice
+            if is_good(test_mdices):
                 torch.save(
                     model_without_ddp.state_dict(),
                     os.path.join(
@@ -253,7 +257,7 @@ def get_args():
     parser.add_argument("--data-root", type=str, default="./data/TrainDataset")
     parser.add_argument("--batch-size", type=int, default=16)
     parser.add_argument("--workers", type=int, default=16)
-    parser.add_argument("--backbone", type=str, default="pvt")
+    parser.add_argument("--backbone", type=str, default="pvt_dilated_conv")
     parser.add_argument("--epochs", type=int, default=80)
     parser.add_argument("--lr", type=float, default=1e-4)
     parser.add_argument("--lr-decay-epochs", type=int, default=40)

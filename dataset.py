@@ -1,6 +1,7 @@
 import os
-from torch.utils.data import Dataset
+
 from PIL import Image
+from torch.utils.data import Dataset
 
 
 class PolypDataset(Dataset):
@@ -48,12 +49,8 @@ class PolypDataset(Dataset):
 
 if __name__ == "__main__":
     from torch.utils.data import DataLoader
-    from transforms import (
-        Compose,
-        Resize,
-        ToTensor,
-        Normalize,
-    )
+
+    from transforms import Compose, Normalize, Resize, ToTensor
 
     root = "./data/TrainDataset"
     transforms = Compose([
