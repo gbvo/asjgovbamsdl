@@ -161,7 +161,7 @@ def train(args):
                               pin_memory=True)
     model = BUNet()
     model.load_backbone_weights(
-        "./weights/pretrained/pvt_v2_b2.pth"
+        "./weights/pretrained/mit_b2.pth"
     )
 
     model.to(device)
@@ -257,7 +257,7 @@ def get_args():
     parser.add_argument("--data-root", type=str, default="./data/TrainDataset")
     parser.add_argument("--batch-size", type=int, default=16)
     parser.add_argument("--workers", type=int, default=16)
-    parser.add_argument("--backbone", type=str, default="pvt")
+    parser.add_argument("--backbone", type=str, default="mit")
     parser.add_argument("--epochs", type=int, default=100)
     parser.add_argument("--lr", type=float, default=1e-4)
     parser.add_argument("--lr-decay-epochs", type=int, default=50)

@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from pvt import pvt_v2_b2
+from mit import mit_b2
 
 
 class BasicConv2d(nn.Module):
@@ -95,7 +95,7 @@ class BUNet(nn.Module):
     def __init__(self, channel=32):
         super(BUNet, self).__init__()
 
-        self.backbone = pvt_v2_b2()  # [64, 128, 320, 512]
+        self.backbone = mit_b2()  # [64, 128, 320, 512]
         self.Translayer1 = BasicConv2d(64, channel, 1)
         self.Translayer2 = BasicConv2d(128, channel, 1)
         self.Translayer3 = BasicConv2d(320, channel, 1)
@@ -125,11 +125,11 @@ class BUNet(nn.Module):
     def forward(self, x):
         HW = x.shape[-2:]
         # backbone
-        pvt = self.backbone(x)
-        x1 = pvt[0]     # (b, 64, 88, 88)
-        x2 = pvt[1]     # (b, 128, 44, 44)
-        x3 = pvt[2]     # (b, 320, 22, 22)
-        x4 = pvt[3]     # (b, 512, 11, 11)
+        mit = self.backbone(x)
+        x1 = mit[0]     # (b, 64, 88, 88)
+        x2 = mit[1]     # (b, 128, 44, 44)
+        x3 = mit[2]     # (b, 320, 22, 22)
+        x4 = mit[3]     # (b, 512, 11, 11)
 
         x1 = self.Translayer1(x1)     # (b, 32, 88, 88)
         x2 = self.Translayer2(x2)     # (b, 32, 44, 44)

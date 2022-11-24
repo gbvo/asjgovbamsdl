@@ -38,14 +38,14 @@ def evaluate(model, ds, test_loader, device, save_path):
 
 
 def main():
-    save_path = "./results/pvt_dilated_conv"
+    save_path = "./results/mit"
     model = BUNet()
     device = torch.device("cuda:0")
     model.to(device)
     model.load_state_dict(
         torch.load(
             ("./weights/training/"
-             "backbone_pvt_dilated_conv_batch_50_epochs_100_lr_0_0001/"
+             "backbone_mit_batch_50_epochs_100_lr_0_0001/"
              "20221121005535/epoch_028_best.pth")
         )
     )
