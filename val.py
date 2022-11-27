@@ -41,7 +41,7 @@ def evaluate(model, ds, test_loader, device, save_path):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "--save_path", type=str, default="./results/pvt_dilated_conv"
+        "--save_path", type=str, default="./results/pvt_dilated_conv_baseline"
     )
     parser.add_argument("--device", type=str, default="cuda:0")
     parser.add_argument("--weight", type=str, required=True)
