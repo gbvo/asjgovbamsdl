@@ -8,11 +8,9 @@ class Resize:
     def __call__(self, sample):
         image = sample["image"]
         mask = sample["mask"]
-        imask = sample["imask"]
         boundary = sample["boundary"]
         sample["image"] = F.resize(image, self.size)
         sample["mask"] = F.resize(mask, self.size)
-        sample["imask"] = F.resize(imask, self.size)
         sample["boundary"] = F.resize(boundary, self.size)
         return sample
 
@@ -21,11 +19,9 @@ class ToTensor:
     def __call__(self, sample):
         image = sample["image"]
         mask = sample["mask"]
-        imask = sample["imask"]
         boundary = sample["boundary"]
         sample["image"] = F.to_tensor(image)
         sample["mask"] = F.to_tensor(mask)
-        sample["imask"] = F.to_tensor(imask)
         sample["boundary"] = F.to_tensor(boundary)
         return sample
 
