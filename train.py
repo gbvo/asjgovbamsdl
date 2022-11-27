@@ -16,8 +16,7 @@ from torch.utils.data import DataLoader, DistributedSampler
 from dataset import PolypDataset
 from model import BUNet
 from transforms import Compose, Normalize, Resize, ToTensor
-from utils import (dice_bce_loss, dice_loss, get_lr_decay, setup_ddp,
-                   setup_logger)
+from utils import dice_bce_loss, get_lr_decay, setup_ddp, setup_logger
 
 
 # ugly
@@ -75,11 +74,10 @@ def train_one_epoch(model: nn.Module,
     model.train()
     local_loss = torch.zeros(1).to(device)
     for i, sample in enumerate(train_loader):
-        image, mask, imask, boundary = (
+        image, mask, imask = (
             sample["image"].to(device),
             sample["mask"].to(device),
             sample["imask"].to(device),
-            sample["boundary"].to(device),
         )
         for size in [256, 352, 448]:
             if not size == 352:
@@ -95,22 +93,18 @@ def train_one_epoch(model: nn.Module,
                                       size=(size, size),
                                       mode="bilinear",
                                       align_corners=False)
-                boundary = F.interpolate(boundary,
-                                         size=(size, size),
-                                         mode="bilinear",
-                                         align_corners=False)
+
             with torch.cuda.amp.autocast(enabled=True):
-                fg2, fg3, fg4, bg2, bg3, bg4, edge = model(image)
+                fg2, fg3, fg4, bg2, bg3, bg4 = model(image)
                 loss_fg2 = criterion(fg2, mask)
                 loss_fg3 = criterion(fg3, mask)
                 loss_fg4 = criterion(fg4, mask)
                 loss_bg2 = criterion(bg2, imask)
                 loss_bg3 = criterion(bg3, imask)
                 loss_bg4 = criterion(bg4, imask)
-                loss_edge = dice_loss(edge, boundary)
 
                 loss = (loss_fg2 + loss_fg3 + loss_fg4 +
-                        loss_bg2 + loss_bg3 + loss_bg4 + loss_edge)
+                        loss_bg2 + loss_bg3 + loss_bg4)
             optimizer.zero_grad()
             scaler.scale(loss).backward()
             scaler.step(optimizer)
@@ -257,7 +251,9 @@ def get_args():
     parser.add_argument("--data-root", type=str, default="./data/TrainDataset")
     parser.add_argument("--batch-size", type=int, default=16)
     parser.add_argument("--workers", type=int, default=16)
-    parser.add_argument("--backbone", type=str, default="pvt_dilated_conv")
+    parser.add_argument(
+        "--backbone", type=str, default="pvt_dilated_conv_without_edge"
+    )
     parser.add_argument("--epochs", type=int, default=80)
     parser.add_argument("--lr", type=float, default=1e-4)
     parser.add_argument("--lr-decay-epochs", type=int, default=40)
