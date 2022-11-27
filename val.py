@@ -1,3 +1,4 @@
+import argparse
 import os
 
 import cv2
@@ -38,17 +39,20 @@ def evaluate(model, ds, test_loader, device, save_path):
 
 
 def main():
-    save_path = "./results/pvt_dilated_conv"
-    model = BUNet()
-    device = torch.device("cuda:0")
-    model.to(device)
-    model.load_state_dict(
-        torch.load(
-            ("./weights/training/"
-             "backbone_pvt_dilated_conv_batch_50_epochs_100_lr_0_0001/"
-             "20221121005535/epoch_028_best.pth")
-        )
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--save_path", type=str, default="./results/pvt_dilated_conv"
     )
+    parser.add_argument("--device", type=str, default="cuda:0")
+    parser.add_argument("--weight", type=str, required=True)
+
+    args = parser.parse_args()
+
+    save_path = args.save_path
+    device = torch.device(args.device)
+    model = BUNet()
+    model.to(device)
+    model.load_state_dict(torch.load(args.weight))
     transforms = Compose([
         Resize(size=(352, 352)),
         ToTensor(),
