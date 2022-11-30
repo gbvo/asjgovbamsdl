@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from pvt import pvt_v2_b2
+from resnet import resnet50
 
 
 class BasicConv2d(nn.Module):
@@ -129,11 +129,11 @@ class BUNet(nn.Module):
     def __init__(self, channel=32):
         super(BUNet, self).__init__()
 
-        self.backbone = pvt_v2_b2()  # [64, 128, 320, 512]
-        self.Translayer1 = TransLayer(64, channel)
-        self.Translayer2 = TransLayer(128, channel)
-        self.Translayer3 = TransLayer(320, channel)
-        self.Translayer4 = TransLayer(512, channel)
+        self.backbone = resnet50()  # [64, 128, 320, 512]
+        self.Translayer1 = TransLayer(256, channel)
+        self.Translayer2 = TransLayer(512, channel)
+        self.Translayer3 = TransLayer(1024, channel)
+        self.Translayer4 = TransLayer(2048, channel)
 
         self.fpn = FPN(channel)
 
@@ -159,11 +159,11 @@ class BUNet(nn.Module):
     def forward(self, x):
         HW = x.shape[-2:]
         # backbone
-        pvt = self.backbone(x)
-        x1 = pvt[0]     # (b, 64, 88, 88)
-        x2 = pvt[1]     # (b, 128, 44, 44)
-        x3 = pvt[2]     # (b, 320, 22, 22)
-        x4 = pvt[3]     # (b, 512, 11, 11)
+        features = self.backbone(x)
+        x1 = features[0]     # (b, 256, 88, 88)
+        x2 = features[1]     # (b, 512, 44, 44)
+        x3 = features[2]     # (b, 1024, 22, 22)
+        x4 = features[3]     # (b, 2048, 11, 11)
 
         x1 = self.Translayer1(x1)     # (b, 32, 88, 88)
         x2 = self.Translayer2(x2)     # (b, 32, 44, 44)
