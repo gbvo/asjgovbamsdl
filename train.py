@@ -100,7 +100,8 @@ def train_one_epoch(model: nn.Module,
                                          mode="bilinear",
                                          align_corners=False)
             with torch.cuda.amp.autocast(enabled=True):
-                fg2, fg3, fg4, bg2, bg3, bg4, edge = model(image)
+                fg, fg2, fg3, fg4, bg2, bg3, bg4, edge = model(image)
+                loss_fg = criterion(fg, mask)
                 loss_fg2 = criterion(fg2, mask)
                 loss_fg3 = criterion(fg3, mask)
                 loss_fg4 = criterion(fg4, mask)
@@ -109,7 +110,7 @@ def train_one_epoch(model: nn.Module,
                 loss_bg4 = criterion(bg4, imask)
                 loss_edge = dice_loss(edge, boundary)
 
-                loss = (loss_fg2 + loss_fg3 + loss_fg4 +
+                loss = (loss_fg + loss_fg2 + loss_fg3 + loss_fg4 +
                         loss_bg2 + loss_bg3 + loss_bg4 + loss_edge)
             optimizer.zero_grad()
             scaler.scale(loss).backward()
@@ -257,7 +258,9 @@ def get_args():
     parser.add_argument("--data-root", type=str, default="./data/TrainDataset")
     parser.add_argument("--batch-size", type=int, default=16)
     parser.add_argument("--workers", type=int, default=16)
-    parser.add_argument("--backbone", type=str, default="pvt_dilated_conv")
+    parser.add_argument(
+        "--backbone", type=str, default="pvt_dilated_conv_concat"
+    )
     parser.add_argument("--epochs", type=int, default=80)
     parser.add_argument("--lr", type=float, default=1e-4)
     parser.add_argument("--lr-decay-epochs", type=int, default=40)
