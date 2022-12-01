@@ -128,7 +128,7 @@ class BUNet(nn.Module):
             BasicConv2d(channel, channel, 3, 1, 1),
             BasicConv2d(channel, channel, 3, 1, 1),
         )
-
+        self.conv_final = nn.Conv2d(3, 1, 1, 1, 0, bias=False)
         self.conv_edge_1x1 = nn.Conv2d(channel, 1, 1)
 
     def load_backbone_weights(self, path):
@@ -165,15 +165,15 @@ class BUNet(nn.Module):
         fg2 = F.interpolate(fg2, size=HW, mode='bilinear', align_corners=False)
         fg3 = F.interpolate(fg3, size=HW, mode='bilinear', align_corners=False)
         fg4 = F.interpolate(fg4, size=HW, mode='bilinear', align_corners=False)
-
+        fg = self.conv_final(torch.cat((fg2, fg3, fg4), dim=1))
         edge = F.interpolate(
             edge, size=HW, mode='bilinear', align_corners=False
         )
 
         if self.training:
-            return fg2, fg3, fg4, edge
+            return fg, fg2, fg3, fg4, edge
         else:
-            return fg2
+            return fg
 
 
 if __name__ == '__main__':
