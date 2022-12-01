@@ -43,7 +43,7 @@ def main():
     parser.add_argument(
         "--save_path",
         type=str,
-        default="./results/pvt_dilated_conv_without_edge"
+        default="./results/pvt_dilated_conv_concat_without_edge"
     )
     parser.add_argument("--device", type=str, default="cuda:0")
     parser.add_argument("--weight", type=str, required=True)
